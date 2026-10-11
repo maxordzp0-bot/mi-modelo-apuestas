@@ -5,7 +5,6 @@ import requests
 from scipy.stats import norm, poisson
 import nfl_data_py as nfl
 from io import StringIO
-
 # ==========================================
 # 🎨 CONFIGURACIÓN Y UI (SPA STATE)
 # ==========================================
