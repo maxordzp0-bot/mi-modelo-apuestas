@@ -77,15 +77,23 @@ def calcular_epa_nfl():
 @st.cache_data(ttl=86400)
 def obtener_stats_futbol(url):
     try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        html = requests.get(url, headers=headers).text
+        # Camuflaje avanzado para saltar bloqueos anti-bots
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'es-MX,es;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Referer': 'https://www.google.com/'
+        }
+        html = requests.get(url, headers=headers, timeout=10).text
         tablas = pd.read_html(StringIO(html))
+        
         df_nombres = tablas[0].copy()
         df_stats = tablas[1].copy()
         df_nombres.columns = ['Equipo']
         # Limpia codigos de ESPN (Ej. "1 MEXCruz Azul" -> "Cruz Azul")
         df_nombres['Equipo'] = df_nombres['Equipo'].str.replace(r'^\d+\s*[A-Z]{2,3}\s*', '', regex=True)
         df = pd.concat([df_nombres, df_stats], axis=1)
+        
         if 'GF' in df.columns and 'GC' in df.columns and 'J' in df.columns:
             df['Goles_Anotados'] = df['GF'] / df['J']
             df['Goles_Recibidos'] = df['GC'] / df['J']
@@ -96,7 +104,6 @@ def obtener_stats_futbol(url):
 
 def buscar_stats_seguras(df, equipo_api):
     if df.empty: return None, None
-    # Alias para equipos latinos que cambian mucho de nombre
     alias = {
         "Pumas UNAM": "UNAM", "Atletico San Luis": "San Luis", 
         "Club Tijuana": "Tijuana", "FC Juarez": "Juarez",
@@ -108,7 +115,6 @@ def buscar_stats_seguras(df, equipo_api):
     def norm(t): return ''.join(c for c in unicodedata.normalize('NFD', str(t)) if unicodedata.category(c) != 'Mn').lower()
     eq_norm = norm(equipo_api)
     
-    # Busca coincidencias exactas o parciales ignorando acentos
     for idx, row in df.iterrows():
         espn_norm = norm(row['Equipo'])
         if espn_norm in eq_norm or eq_norm in espn_norm:
@@ -286,13 +292,4 @@ elif st.session_state.current_page == 'nfl':
                             <div class="metric-box" style="display:inline-block; margin-top:5px;">
                                 <div style="font-size:0.8rem; color:#166534; font-weight: bold;">MEJOR APUESTA SPREAD (Linea: {spread_real})</div>
                                 <div class="metric-val">{pick_txt}</div>
-                                <div style="color:#222; font-weight:bold;">Probabilidad: {prob_txt} | EV: {ev_nfl:+.2f}%</div>
-                            </div>
-                        </div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                except:
-                    pass
-
-elif st.session_state.current_page == 'usa':
-    st.markdown('<div class="hero-title" style="font-size:2.5rem; margin-top:0;">MLB / NBA <span>(Proximamente)</span></div>', unsafe_allow_html=True)
+                                <div style="color:#222; font-weight:bold;">Probabilidad: {prob_txt} | EV:
