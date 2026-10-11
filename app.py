@@ -140,22 +140,22 @@ if st.session_state.current_page != 'home':
     st.divider()
 
 if st.session_state.current_page == 'home':
-    st.markdown('<div class="hero-title">La inteligencia<br><span>tambien juega.</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">Futbol, NFL y Ligas USA en un solo modelo.</div>', unsafe_allow_html=True)
+    st.markdown("""<div class="hero-title">La inteligencia<br><span>tambien juega.</span></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="hero-subtitle">Futbol, NFL y Ligas USA en un solo modelo.</div>""", unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown('<div class="league-card" style="border: 2px solid #00B85C;"><h2>Futbol</h2><p>Modelo Poisson y xG</p></div>', unsafe_allow_html=True)
+        st.markdown("""<div class="league-card" style="border: 2px solid #00B85C;"><h2>Futbol</h2><p>Modelo Poisson y xG</p></div>""", unsafe_allow_html=True)
         if st.button("Entrar a Futbol", type="primary", use_container_width=True): navigate('futbol')
     with c2:
-        st.markdown('<div class="league-card"><h2>NFL</h2><p>Cartelera y EPA</p></div>', unsafe_allow_html=True)
+        st.markdown("""<div class="league-card"><h2>NFL</h2><p>Cartelera y EPA</p></div>""", unsafe_allow_html=True)
         if st.button("Entrar a NFL", use_container_width=True): navigate('nfl')
     with c3:
-        st.markdown('<div class="league-card"><h2>MLB / NBA</h2><p>Proximamente</p></div>', unsafe_allow_html=True)
+        st.markdown("""<div class="league-card"><h2>MLB / NBA</h2><p>Proximamente</p></div>""", unsafe_allow_html=True)
         if st.button("Entrar a Ligas USA", use_container_width=True): navigate('usa')
 
 elif st.session_state.current_page == 'futbol':
-    st.markdown('<div class="hero-title" style="font-size:2.5rem; margin-top:0;">Fútbol <span>Pro.</span></div>', unsafe_allow_html=True)
+    st.markdown("""<div class="hero-title" style="font-size:2.5rem; margin-top:0;">Fútbol <span>Pro.</span></div>""", unsafe_allow_html=True)
     
     LIGAS_FUT = {
         "Liga MX": {"odds": "soccer_mexico_ligamx", "espn": "https://www.espn.com.mx/futbol/posiciones/_/liga/mex.1"},
@@ -200,7 +200,7 @@ elif st.session_state.current_page == 'futbol':
                 
                 p_l, p_e, p_v, p_o = simular_poisson(xg_loc, xg_vis)
                 
-                st.markdown(f'''
+                st.markdown(f"""
                 <div class="match-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="flex:1;"><h3 style="margin:0;">{loc}</h3><span>xG Real: {xg_loc:.2f}</span></div>
@@ -208,7 +208,7 @@ elif st.session_state.current_page == 'futbol':
                         <div style="flex:1; text-align:right;"><h3 style="margin:0;">{vis}</h3><span>xG Real: {xg_vis:.2f}</span></div>
                     </div>
                 </div>
-                ''', unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
                 
                 apuestas = []
                 for name, p_real, m_casino in [("Gana Local", p_l, m_loc), ("Empate", p_e, m_emp), ("Gana Visita", p_v, m_vis), ("Over 2.5", p_o, m_over)]:
@@ -223,7 +223,7 @@ elif st.session_state.current_page == 'futbol':
                 st.warning(f"⚠️ Partido omitido: No se encontraron datos precisos para {loc} vs {vis}.")
 
 elif st.session_state.current_page == 'nfl':
-    st.markdown('<div class="hero-title" style="font-size:2.5rem; margin-top:0;">NFL <span>Pro.</span></div>', unsafe_allow_html=True)
+    st.markdown("""<div class="hero-title" style="font-size:2.5rem; margin-top:0;">NFL <span>Pro.</span></div>""", unsafe_allow_html=True)
     st.caption("Cartelera oficial en vivo. El modelo detecta automaticamente todos los juegos de la semana.")
     bankroll = st.sidebar.number_input("Tu Bankroll ($)", value=1000, step=100)
     
@@ -280,7 +280,7 @@ elif st.session_state.current_page == 'nfl':
                         pick_txt = f"{vis_sigla} {-spread_real:+.1f}"
                         prob_txt = f"{p_cubrir_visita*100:.1f}%"
                         
-                    st.markdown(f'''
+                    st.markdown(f"""
                     <div class="match-card">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="flex:1;"><h3 style="margin:0;">{local_nombre}</h3><span style="color:#888;">Local</span></div>
@@ -292,4 +292,13 @@ elif st.session_state.current_page == 'nfl':
                             <div class="metric-box" style="display:inline-block; margin-top:5px;">
                                 <div style="font-size:0.8rem; color:#166534; font-weight: bold;">MEJOR APUESTA SPREAD (Linea: {spread_real})</div>
                                 <div class="metric-val">{pick_txt}</div>
-                                <div style="color:#222; font-weight:bold;">Probabilidad: {prob_txt} | EV:
+                                <div style="color:#222; font-weight:bold;">Probabilidad: {prob_txt} | EV: {ev_nfl:+.2f}% | Stake Recomendado: ${s_nfl}</div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                except:
+                    pass
+
+elif st.session_state.current_page == 'usa':
+    st.markdown("""<div class="hero-title" style="font-size:2.5rem; margin-top:0;">MLB / NBA <span>(Proximamente)</span></div>""", unsafe_allow_html=True)
