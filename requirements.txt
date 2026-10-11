@@ -3,5 +3,6 @@ pandas
 numpy
 scipy
 requests
+nfl_data_py
 lxml
 html5lib
