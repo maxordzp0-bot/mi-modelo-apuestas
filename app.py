@@ -17,7 +17,7 @@ def navigate(page):
 API_KEY = "03c8dcaac9c6425d58d471ce7ff88287"
 
 # ==========================================
-# 🎨 CSS CORREGIDO (Forzando letras oscuras)
+# 🎨 CSS CORREGIDO
 # ==========================================
 st.markdown("""
 <style>
@@ -40,7 +40,6 @@ st.markdown("""
     .metric-box { background: #F0FDF4 !important; border: 1px solid #BBF7D0 !important; padding: 10px; border-radius: 8px; text-align: center; }
     .metric-val { font-size: 1.5rem; font-weight: 800; color: #166534 !important; }
     
-    /* Forzar textos nativos a oscuro */
     div[data-testid="stRadio"] label, div[data-testid="stSelectbox"] label, div[data-testid="stNumberInput"] label { color: #111 !important; font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
@@ -197,67 +196,83 @@ elif st.session_state.current_page == 'futbol':
 
 elif st.session_state.current_page == 'nfl':
     st.markdown('<div class="hero-title" style="font-size:2.5rem; margin-top:0;">NFL <span>Pro.</span></div>', unsafe_allow_html=True)
+    st.caption("Cartelera oficial en vivo. El modelo detecta automaticamente todos los juegos programados de la semana.")
     bankroll = st.sidebar.number_input("Tu Bankroll ($)", value=1000, step=100)
     
-    with st.spinner("Descargando metricas EPA y momios..."):
+    with st.spinner("Descargando metricas EPA y juegos programados..."):
         try:
             df_epa = calcular_epa_nfl()
             momios_nfl = obtener_momios_api(API_KEY, "americanfootball_nfl")
         except Exception as e:
-            st.error(f"Ocurrió un problema al descargar los datos de la NFL: {str(e)}")
+            st.error(f"Error descargando datos: {str(e)}")
             st.stop()
             
     nfl_alias = {"ARI": "Arizona Cardinals", "ATL": "Atlanta Falcons", "BAL": "Baltimore Ravens", "BUF": "Buffalo Bills", "CAR": "Carolina Panthers", "CHI": "Chicago Bears", "CIN": "Cincinnati Bengals", "CLE": "Cleveland Browns", "DAL": "Dallas Cowboys", "DEN": "Denver Broncos", "DET": "Detroit Lions", "GB": "Green Bay Packers", "HOU": "Houston Texans", "IND": "Indianapolis Colts", "JAX": "Jacksonville Jaguars", "KC": "Kansas City Chiefs", "LV": "Las Vegas Raiders", "LAC": "Los Angeles Chargers", "LA": "Los Angeles Rams", "LAR": "Los Angeles Rams", "MIA": "Miami Dolphins", "MIN": "Minnesota Vikings", "NE": "New England Patriots", "NO": "New Orleans Saints", "NYG": "New York Giants", "NYJ": "New York Jets", "PHI": "Philadelphia Eagles", "PIT": "Pittsburgh Steelers", "SF": "San Francisco 49ers", "SEA": "Seattle Seahawks", "TB": "Tampa Bay Buccaneers", "TEN": "Tennessee Titans", "WAS": "Washington Commanders"}
     
-    equipos_siglas = df_epa['Equipo'].tolist() if not df_epa.empty else list(nfl_alias.keys())
+    reverse_alias = {v: k for k, v in nfl_alias.items()}
+    reverse_alias["Los Angeles Rams"] = "LA" # Correccion manual de API
     
-    col1, col2 = st.columns(2)
-    with col1: loc_nfl = st.selectbox("Equipo Local", equipos_siglas, index=0)
-    with col2: vis_nfl = st.selectbox("Equipo Visitante", equipos_siglas, index=1)
-    
-    spread_real, total_real, momio_spread = 0.0, 45.5, -110
-    
-    for m in momios_nfl:
-        if m['home_team'] == nfl_alias.get(loc_nfl, ""):
+    if not momios_nfl:
+        st.warning("No hay momios de NFL disponibles en este momento.")
+    else:
+        for m in momios_nfl:
+            local_nombre = m.get('home_team', '')
+            visita_nombre = m.get('away_team', '')
+            
+            loc_sigla = reverse_alias.get(local_nombre, "")
+            vis_sigla = reverse_alias.get(visita_nombre, "")
+            
+            spread_real, total_real, momio_spread = "N/A", "N/A", -110
+            
             if len(m['bookmakers']) > 0:
                 for mrk in m['bookmakers'][0]['markets']:
                     if mrk['key'] == 'spreads':
                         for out in mrk['outcomes']:
-                            if out['name'] == m['home_team']: 
+                            if out['name'] == local_nombre: 
                                 spread_real = out['point']
                                 momio_spread = out['price']
-                    if mrk['key'] == 'totals': total_real = mrk['outcomes'][0]['point']
-                    
-    st.info(f"Lineas extraidas: Spread Local {spread_real} | Total {total_real}")
-    
-    if not df_epa.empty:
-        net_l = df_epa[df_epa['Equipo'] == loc_nfl]['Net_EPA'].values[0]
-        net_v = df_epa[df_epa['Equipo'] == vis_nfl]['Net_EPA'].values[0]
-        
-        margen_nfl = ((net_l - net_v) * 63) + 2.0 
-        
-        p_cubrir_local = 1 - norm.cdf(-spread_real, loc=margen_nfl, scale=13.5)
-        p_cubrir_visita = 1 - p_cubrir_local
-        
-        if p_cubrir_local > 0.5:
-            _, ev_nfl, s_nfl = calcular_ev_y_kelly(p_cubrir_local, momio_spread, bankroll)
-            pick_txt = f"{loc_nfl} {spread_real:+.1f}"
-            prob_txt = f"{p_cubrir_local*100:.1f}%"
-        else:
-            _, ev_nfl, s_nfl = calcular_ev_y_kelly(p_cubrir_visita, momio_spread, bankroll)
-            pick_txt = f"{vis_nfl} {-spread_real:+.1f}"
-            prob_txt = f"{p_cubrir_visita*100:.1f}%"
+                    if mrk['key'] == 'totals':
+                        total_real = mrk['outcomes'][0]['point']
             
-        st.markdown(f'''
-        <div class="match-card" style="text-align:center;">
-            <p style="margin-bottom:5px;">Ganara {loc_nfl if margen_nfl > 0 else vis_nfl} por {abs(margen_nfl):.1f} puntos.</p>
-            <div class="metric-box" style="display:inline-block; margin-top:10px;">
-                <div style="font-size:0.8rem; color:#166534; font-weight: bold;">MEJOR APUESTA SPREAD</div>
-                <div class="metric-val">{pick_txt}</div>
-                <div style="color:#222; font-weight:bold;">Probabilidad: {prob_txt} | EV: {ev_nfl:+.2f}%</div>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
+            # Solo procesar si tenemos los datos completos para ambos equipos
+            if spread_real != "N/A" and not df_epa.empty and loc_sigla and vis_sigla:
+                try:
+                    net_l = df_epa[df_epa['Equipo'] == loc_sigla]['Net_EPA'].values[0]
+                    net_v = df_epa[df_epa['Equipo'] == vis_sigla]['Net_EPA'].values[0]
+                    
+                    margen_nfl = ((net_l - net_v) * 63) + 2.0 
+                    
+                    p_cubrir_local = 1 - norm.cdf(-spread_real, loc=margen_nfl, scale=13.5)
+                    p_cubrir_visita = 1 - p_cubrir_local
+                    
+                    if p_cubrir_local > 0.5:
+                        _, ev_nfl, s_nfl = calcular_ev_y_kelly(p_cubrir_local, momio_spread, bankroll)
+                        pick_txt = f"{loc_sigla} {spread_real:+.1f}"
+                        prob_txt = f"{p_cubrir_local*100:.1f}%"
+                    else:
+                        _, ev_nfl, s_nfl = calcular_ev_y_kelly(p_cubrir_visita, momio_spread, bankroll)
+                        pick_txt = f"{vis_sigla} {-spread_real:+.1f}"
+                        prob_txt = f"{p_cubrir_visita*100:.1f}%"
+                        
+                    st.markdown(f'''
+                    <div class="match-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="flex:1;"><h3 style="margin:0;">{local_nombre}</h3><span style="color:#888;">Local</span></div>
+                            <div style="font-weight:900; color:#ccc; font-size:1.5rem; padding: 0 20px;">VS</div>
+                            <div style="flex:1; text-align:right;"><h3 style="margin:0;">{visita_nombre}</h3><span style="color:#888;">Visita</span></div>
+                        </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; text-align:center;">
+                            <p style="margin-bottom:5px; color:#555;">Proyeccion EPA: Ganara {loc_sigla if margen_nfl > 0 else vis_sigla} por {abs(margen_nfl):.1f} pts.</p>
+                            <div class="metric-box" style="display:inline-block; margin-top:5px;">
+                                <div style="font-size:0.8rem; color:#166534; font-weight: bold;">MEJOR APUESTA SPREAD (Linea del Casino: {spread_real})</div>
+                                <div class="metric-val">{pick_txt}</div>
+                                <div style="color:#222; font-weight:bold;">Probabilidad: {prob_txt} | EV: {ev_nfl:+.2f}% | Stake Recomendado: ${s_nfl}</div>
+                            </div>
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                except:
+                    pass # Omite equipos sin datos
 
 elif st.session_state.current_page == 'usa':
     st.markdown('<div class="hero-title" style="font-size:2.5rem; margin-top:0;">MLB / NBA <span>(Proximamente)</span></div>', unsafe_allow_html=True)
