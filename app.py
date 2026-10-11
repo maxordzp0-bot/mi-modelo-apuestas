@@ -89,9 +89,10 @@ def obtener_stats_futbol_api(api_id):
                 
                 j = gf = gc = 0
                 for s in stats:
-                    if s['name'] == 'gamesPlayed': j = s['value']
-                    elif s['name'] == 'goalsFor': gf = s['value']
-                    elif s['name'] == 'goalsAgainst': gc = s['value']
+                    stat_name = s.get('name', '')
+                    if stat_name == 'gamesPlayed': j = s['value']
+                    elif stat_name in ['goalsFor', 'pointsFor']: gf = s['value']
+                    elif stat_name in ['goalsAgainst', 'pointsAgainst']: gc = s['value']
                 
                 if j > 0:
                     equipos.append({
@@ -109,7 +110,9 @@ def buscar_stats_seguras(df, equipo_api):
         "Pumas UNAM": "UNAM", "Atletico San Luis": "San Luis", 
         "Club Tijuana": "Tijuana", "FC Juarez": "Juarez",
         "Mazatlan FC": "Mazatlan", "Santos Laguna": "Santos",
-        "Club America": "America"
+        "Club America": "America", "CF Monterrey": "Monterrey",
+        "C.F. Monterrey": "Monterrey", "CD Cruz Azul": "Cruz Azul",
+        "Cruz Azul": "Cruz Azul"
     }
     equipo_api = alias.get(equipo_api, equipo_api)
     
@@ -181,16 +184,18 @@ elif st.session_state.current_page == 'futbol':
             loc, vis = partido.get("home_team", ""), partido.get("away_team", "")
             m_loc = m_emp = m_vis = m_over = "N/A"
             
-            if len(partido["bookmakers"]) > 0:
-                for m in partido["bookmakers"][0].get("markets", []):
-                    if m["key"] == "h2h":
-                        for out in m["outcomes"]:
-                            if out["name"] == loc: m_loc = out["price"]
-                            elif out["name"] == vis: m_vis = out["price"]
-                            elif out["name"] == "Draw": m_emp = out["price"]
-                    if m["key"] == "totals":
-                        for out in m["outcomes"]:
-                            if out["name"] == "Over" and out.get("point") == 2.5: m_over = out["price"]
+            if len(partido.get("bookmakers", [])) > 0:
+                for bm in partido["bookmakers"]:
+                    for m in bm.get("markets", []):
+                        if m["key"] == "h2h":
+                            for out in m["outcomes"]:
+                                if out["name"] == loc and m_loc == "N/A": m_loc = out["price"]
+                                elif out["name"] == vis and m_vis == "N/A": m_vis = out["price"]
+                                elif out["name"] == "Draw" and m_emp == "N/A": m_emp = out["price"]
+                        if m["key"] == "totals":
+                            for out in m["outcomes"]:
+                                if out["name"] == "Over" and out.get("point") == 2.5 and m_over == "N/A": 
+                                    m_over = out["price"]
             
             loc_a, loc_r = buscar_stats_seguras(df_futbol, loc)
             vis_a, vis_r = buscar_stats_seguras(df_futbol, vis)
