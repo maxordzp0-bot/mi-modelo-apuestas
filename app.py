@@ -6,10 +6,7 @@ from scipy.stats import norm, poisson
 import nfl_data_py as nfl
 from io import StringIO
 
-# ==========================================
-# CONFIGURACION Y UI
-# ==========================================
-st.set_page_config(page_title="QuantBet Pro | Inteligencia Deportiva", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="QuantBet Pro", layout="wide", initial_sidebar_state="collapsed")
 
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'home'
@@ -17,32 +14,37 @@ if 'current_page' not in st.session_state:
 def navigate(page):
     st.session_state.current_page = page
 
-# ==========================================
-# THE ODDS API
-# ==========================================
 API_KEY = "03c8dcaac9c6425d58d471ce7ff88287"
 
 # ==========================================
-# CSS PERSONALIZADO
+# 🎨 CSS CORREGIDO (Forzando letras oscuras)
 # ==========================================
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
-    .stApp { background-color: #F8F9FA; font-family: 'Inter', -apple-system, sans-serif; }
-    .hero-title { font-size: 3.5rem; font-weight: 800; text-align: center; color: #111; margin-top: 1rem; line-height: 1.1; }
-    .hero-title span { color: #00B85C; }
-    .hero-subtitle { text-align: center; color: #666; font-size: 1.1rem; margin-bottom: 2rem; }
-    .league-card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #eee; text-align: center; transition: 0.2s; cursor: pointer; }
-    .league-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); border-color: #00B85C; }
-    .match-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee; margin-bottom: 15px; }
-    .metric-box { background: #F0FDF4; border: 1px solid #BBF7D0; padding: 10px; border-radius: 8px; text-align: center; }
-    .metric-val { font-size: 1.5rem; font-weight: 800; color: #166534; }
+    .stApp { background-color: #F8F9FA; font-family: 'Inter', sans-serif; }
+    
+    .hero-title { font-size: 3.5rem; font-weight: 800; text-align: center; color: #111 !important; margin-top: 1rem; }
+    .hero-title span { color: #00B85C !important; }
+    .hero-subtitle { text-align: center; color: #555 !important; font-size: 1.1rem; margin-bottom: 2rem; }
+    
+    .league-card { background: white !important; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #ddd; text-align: center; cursor: pointer; transition: 0.2s; }
+    .league-card h2 { color: #111 !important; margin-bottom: 5px; }
+    .league-card p { color: #666 !important; }
+    .league-card:hover { transform: translateY(-5px); border-color: #00B85C !important; }
+    
+    .match-card { background: white !important; border-radius: 12px; padding: 15px; border: 1px solid #ddd; margin-bottom: 15px; }
+    .match-card h3 { color: #111 !important; margin: 0; }
+    .match-card span, .match-card p { color: #444 !important; }
+    
+    .metric-box { background: #F0FDF4 !important; border: 1px solid #BBF7D0 !important; padding: 10px; border-radius: 8px; text-align: center; }
+    .metric-val { font-size: 1.5rem; font-weight: 800; color: #166534 !important; }
+    
+    /* Forzar textos nativos a oscuro */
+    div[data-testid="stRadio"] label, div[data-testid="stSelectbox"] label, div[data-testid="stNumberInput"] label { color: #111 !important; font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# MOTORES
-# ==========================================
 @st.cache_data(ttl=10800)
 def obtener_momios_api(api_key, deporte, mercado="spreads,totals"):
     url = f"https://api.the-odds-api.com/v4/sports/{deporte}/odds/"
@@ -63,7 +65,11 @@ def calcular_ev_y_kelly(prob_real, momio, bankroll):
 
 @st.cache_data(ttl=86400)
 def calcular_epa_nfl():
-    pbp = nfl.import_pbp_data([2026])
+    try:
+        pbp = nfl.import_pbp_data([2026])
+    except:
+        pbp = nfl.import_pbp_data([2025])
+        
     pbp = pbp[(pbp['pass'] == 1) | (pbp['rush'] == 1)].dropna(subset=['epa', 'posteam', 'defteam'])
     epa_off = pbp.groupby('posteam')['epa'].mean().reset_index().rename(columns={'posteam': 'Equipo', 'epa': 'EPA_Off'})
     epa_def = pbp.groupby('defteam')['epa'].mean().reset_index().rename(columns={'defteam': 'Equipo', 'epa': 'EPA_Def'})
@@ -101,26 +107,23 @@ def simular_poisson(g_loc, g_vis):
             if (i + j) > 2.5: p_over += prob
     return p_loc, p_emp, p_vis, p_over
 
-# ==========================================
-# VISTAS
-# ==========================================
 if st.session_state.current_page != 'home':
     if st.button("Volver al Menu Principal"): navigate('home')
     st.divider()
 
 if st.session_state.current_page == 'home':
     st.markdown('<div class="hero-title">La inteligencia<br><span>tambien juega.</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">Futbol, NFL y Ligas USA en un solo modelo cuantitativo.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">Futbol, NFL y Ligas USA en un solo modelo.</div>', unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown('<div class="league-card" style="border: 2px solid #00B85C;"><h2>Futbol</h2><p style="color:#888;">Modelo Poisson y xG</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="league-card" style="border: 2px solid #00B85C;"><h2>Futbol</h2><p>Modelo Poisson y xG</p></div>', unsafe_allow_html=True)
         if st.button("Entrar a Futbol", type="primary", use_container_width=True): navigate('futbol')
     with c2:
-        st.markdown('<div class="league-card"><h2>NFL</h2><p style="color:#888;">Metricas EPA</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="league-card"><h2>NFL</h2><p>Metricas EPA</p></div>', unsafe_allow_html=True)
         if st.button("Entrar a NFL", use_container_width=True): navigate('nfl')
     with c3:
-        st.markdown('<div class="league-card"><h2>MLB / NBA</h2><p style="color:#888;">Abridores y Lineas</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="league-card"><h2>MLB / NBA</h2><p>Abridores y Lineas</p></div>', unsafe_allow_html=True)
         if st.button("Entrar a Ligas USA", use_container_width=True): navigate('usa')
 
 elif st.session_state.current_page == 'futbol':
@@ -130,7 +133,7 @@ elif st.session_state.current_page == 'futbol':
         "Liga MX": {"odds": "soccer_mexico_ligamx", "espn": "https://www.espn.com.mx/futbol/posiciones/_/liga/mex.1"},
         "Premier League": {"odds": "soccer_epl", "espn": "https://www.espn.com.mx/futbol/posiciones/_/liga/eng.1"},
         "La Liga": {"odds": "soccer_spain_la_liga", "espn": "https://www.espn.com.mx/futbol/posiciones/_/liga/esp.1"},
-        "Champions League": {"odds": "soccer_uefa_champs_league", "espn": "https://www.espn.com.mx/futbol/posiciones/_/liga/uefa.champions"}
+        "Champions": {"odds": "soccer_uefa_champs_league", "espn": "https://www.espn.com.mx/futbol/posiciones/_/liga/uefa.champions"}
     }
     
     liga_sel = st.radio("Filtro de Competicion:", list(LIGAS_FUT.keys()), horizontal=True)
@@ -145,7 +148,7 @@ elif st.session_state.current_page == 'futbol':
     else:
         for partido in momios_fut:
             loc, vis = partido.get("home_team", ""), partido.get("away_team", "")
-            m_loc, m_emp, m_vis, m_over = "N/A", "N/A", "N/A", "N/A"
+            m_loc = m_emp = m_vis = m_over = "N/A"
             
             if len(partido["bookmakers"]) > 0:
                 for m in partido["bookmakers"][0].get("markets", []):
@@ -175,9 +178,9 @@ elif st.session_state.current_page == 'futbol':
             st.markdown(f'''
             <div class="match-card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="flex:1;"><h3 style="margin:0;">{loc}</h3><span style="color:#888;">xG: {xg_loc:.2f}</span></div>
-                    <div style="font-weight:900; color:#ddd; font-size:1.5rem; padding: 0 20px;">VS</div>
-                    <div style="flex:1; text-align:right;"><h3 style="margin:0;">{vis}</h3><span style="color:#888;">xG: {xg_vis:.2f}</span></div>
+                    <div style="flex:1;"><h3 style="margin:0;">{loc}</h3><span>xG: {xg_loc:.2f}</span></div>
+                    <div style="font-weight:900; color:#ccc; font-size:1.5rem; padding: 0 20px;">VS</div>
+                    <div style="flex:1; text-align:right;"><h3 style="margin:0;">{vis}</h3><span>xG: {xg_vis:.2f}</span></div>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
@@ -186,14 +189,11 @@ elif st.session_state.current_page == 'futbol':
             for name, p_real, m_casino in [("Gana Local", p_l, m_loc), ("Empate", p_e, m_emp), ("Gana Visita", p_v, m_vis), ("Over 2.5", p_o, m_over)]:
                 if m_casino != "N/A":
                     _, ev, s = calcular_ev_y_kelly(p_real, m_casino, bankroll)
-                    if ev > 0: apuestas.append({"Mercado": name, "Momio": m_casino, "Prob": f"{p_real*100:.1f}%", "EV": f"+{ev}%", "Stake": f"${s}"})
+                    if ev > 0: apuestas.append({"Mercado": name, "Momio": m_casino, "Prob Real": f"{p_real*100:.1f}%", "EV": f"+{ev}%", "Stake": f"${s}"})
             
             if apuestas: 
-                st.success("Value Bets:")
+                st.success("Value Bets Detectadas:")
                 st.dataframe(pd.DataFrame(apuestas), use_container_width=True)
-            else: 
-                st.caption("Sin ventaja matematica.")
-            st.write("")
 
 elif st.session_state.current_page == 'nfl':
     st.markdown('<div class="hero-title" style="font-size:2.5rem; margin-top:0;">NFL <span>Pro.</span></div>', unsafe_allow_html=True)
@@ -203,8 +203,8 @@ elif st.session_state.current_page == 'nfl':
         try:
             df_epa = calcular_epa_nfl()
             momios_nfl = obtener_momios_api(API_KEY, "americanfootball_nfl")
-        except:
-            st.error("Error cargando datos de NFL.")
+        except Exception as e:
+            st.error(f"Ocurrió un problema al descargar los datos de la NFL: {str(e)}")
             st.stop()
             
     nfl_alias = {"ARI": "Arizona Cardinals", "ATL": "Atlanta Falcons", "BAL": "Baltimore Ravens", "BUF": "Buffalo Bills", "CAR": "Carolina Panthers", "CHI": "Chicago Bears", "CIN": "Cincinnati Bengals", "CLE": "Cleveland Browns", "DAL": "Dallas Cowboys", "DEN": "Denver Broncos", "DET": "Detroit Lions", "GB": "Green Bay Packers", "HOU": "Houston Texans", "IND": "Indianapolis Colts", "JAX": "Jacksonville Jaguars", "KC": "Kansas City Chiefs", "LV": "Las Vegas Raiders", "LAC": "Los Angeles Chargers", "LA": "Los Angeles Rams", "LAR": "Los Angeles Rams", "MIA": "Miami Dolphins", "MIN": "Minnesota Vikings", "NE": "New England Patriots", "NO": "New Orleans Saints", "NYG": "New York Giants", "NYJ": "New York Jets", "PHI": "Philadelphia Eagles", "PIT": "Pittsburgh Steelers", "SF": "San Francisco 49ers", "SEA": "Seattle Seahawks", "TB": "Tampa Bay Buccaneers", "TEN": "Tennessee Titans", "WAS": "Washington Commanders"}
@@ -228,7 +228,7 @@ elif st.session_state.current_page == 'nfl':
                                 momio_spread = out['price']
                     if mrk['key'] == 'totals': total_real = mrk['outcomes'][0]['point']
                     
-    st.info(f"Lineas The Odds API: Spread Local {spread_real} | Total {total_real}")
+    st.info(f"Lineas extraidas: Spread Local {spread_real} | Total {total_real}")
     
     if not df_epa.empty:
         net_l = df_epa[df_epa['Equipo'] == loc_nfl]['Net_EPA'].values[0]
@@ -250,14 +250,14 @@ elif st.session_state.current_page == 'nfl':
             
         st.markdown(f'''
         <div class="match-card" style="text-align:center;">
-            <p style="color:#666;">El modelo proyecta que ganara {loc_nfl if margen_nfl > 0 else vis_nfl} por {abs(margen_nfl):.1f} puntos.</p>
+            <p style="margin-bottom:5px;">Ganara {loc_nfl if margen_nfl > 0 else vis_nfl} por {abs(margen_nfl):.1f} puntos.</p>
             <div class="metric-box" style="display:inline-block; margin-top:10px;">
-                <div style="font-size:0.8rem; color:#166534; text-transform:uppercase;">Mejor Apuesta Spread</div>
+                <div style="font-size:0.8rem; color:#166534; font-weight: bold;">MEJOR APUESTA SPREAD</div>
                 <div class="metric-val">{pick_txt}</div>
-                <div style="color:#666; font-weight:bold;">Probabilidad: {prob_txt} | EV: {ev_nfl:+.2f}%</div>
+                <div style="color:#222; font-weight:bold;">Probabilidad: {prob_txt} | EV: {ev_nfl:+.2f}%</div>
             </div>
         </div>
         ''', unsafe_allow_html=True)
 
 elif st.session_state.current_page == 'usa':
-    st.markdown('<div class="hero-title" style="font-size:2.5rem; margin-top:0;">MLB / NBA <span>(En Construccion)</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-title" style="font-size:2.5rem; margin-top:0;">MLB / NBA <span>(Proximamente)</span></div>', unsafe_allow_html=True)
