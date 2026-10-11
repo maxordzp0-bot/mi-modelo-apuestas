@@ -206,25 +206,45 @@ elif st.session_state.current_page == 'futbol':
                 
                 p_l, p_e, p_v, p_o = simular_poisson(xg_loc, xg_vis)
                 
-                st.markdown(
-                    f'<div class="match-card">'
-                    f'<div style="display:flex; justify-content:space-between; align-items:center;">'
-                    f'<div style="flex:1;"><h3 style="margin:0;">{loc}</h3><span>xG Real: {xg_loc:.2f}</span></div>'
-                    f'<div style="font-weight:900; color:#ccc; font-size:1.5rem; padding: 0 20px;">VS</div>'
-                    f'<div style="flex:1; text-align:right;"><h3 style="margin:0;">{vis}</h3><span>xG Real: {xg_vis:.2f}</span></div>'
-                    f'</div></div>', 
-                    unsafe_allow_html=True
-                )
-                
+                # Calcular apuestas con EV positivo
                 apuestas = []
                 for name, p_real, m_casino in [("Gana Local", p_l, m_loc), ("Empate", p_e, m_emp), ("Gana Visita", p_v, m_vis), ("Over 2.5", p_o, m_over)]:
                     if m_casino != "N/A":
                         _, ev, s = calcular_ev_y_kelly(p_real, m_casino, bankroll)
-                        if ev > 0: apuestas.append({"Mercado": name, "Momio": m_casino, "Prob Real": f"{p_real*100:.1f}%", "EV": f"+{ev}%", "Stake": f"${s}"})
+                        if ev > 0:
+                            apuestas.append({"name": name, "prob": p_real*100, "ev": ev, "stake": s, "momio": m_casino})
                 
-                if apuestas: 
-                    st.success("Value Bets Detectadas (Basadas en Goles Reales):")
-                    st.dataframe(pd.DataFrame(apuestas), use_container_width=True)
+                # Construir la tarjeta HTML unificada
+                html_card = (
+                    f'<div class="match-card">'
+                    f'<div style="display:flex; justify-content:space-between; align-items:center;">'
+                    f'<div style="flex:1;"><h3 style="margin:0;">{loc}</h3><span style="color:#888;">Local</span></div>'
+                    f'<div style="font-weight:900; color:#ccc; font-size:1.5rem; padding: 0 20px;">VS</div>'
+                    f'<div style="flex:1; text-align:right;"><h3 style="margin:0;">{vis}</h3><span style="color:#888;">Visita</span></div>'
+                    f'</div>'
+                    f'<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; text-align:center;">'
+                    f'<p style="margin-bottom:5px; color:#555;">Proyección xG: {loc} {xg_loc:.2f} - {xg_vis:.2f} {vis}</p>'
+                )
+                
+                # Agregar los recuadros verdes si hay apuestas de valor
+                if apuestas:
+                    # Ordenar para mostrar la apuesta con mayor EV primero
+                    apuestas = sorted(apuestas, key=lambda x: x['ev'], reverse=True)
+                    for ap in apuestas:
+                        html_card += (
+                            f'<div class="metric-box" style="display:inline-block; margin: 5px;">'
+                            f'<div style="font-size:0.8rem; color:#166534; font-weight: bold;">VALUE BET (Momio: {ap["momio"]})</div>'
+                            f'<div class="metric-val">{ap["name"]}</div>'
+                            f'<div style="color:#222; font-weight:bold;">Probabilidad: {ap["prob"]:.1f}% | EV: +{ap["ev"]:.2f}% | Stake Recomendado: ${ap["stake"]}</div>'
+                            f'</div>'
+                        )
+                else:
+                    html_card += '<p style="color:#888; font-size:0.9rem; margin-top:10px;">No se encontraron cuotas con valor (EV+) en este momento.</p>'
+                
+                html_card += '</div></div>'
+                
+                # Renderizar la tarjeta completa en Streamlit
+                st.markdown(html_card, unsafe_allow_html=True)
             else:
                 st.warning(f"⚠️ Partido omitido: Faltan datos precisos para {loc} vs {vis}.")
 
