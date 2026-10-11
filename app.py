@@ -20,7 +20,7 @@ def navigate(page):
 # ==========================================
 # 🔑 THE ODDS API (PON TU CLAVE REAL AQUÍ)
 # ==========================================
-API_KEY = "03c8dcaac9c6425d58d471ce7ff88287" 
+API_KEY = "03c8dcaac9c6425d58d471ce7ff88287"
 
 # ==========================================
 # 🎨 CSS PERSONALIZADO (Look de App Web Premium)
