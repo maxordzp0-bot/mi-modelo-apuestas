@@ -6,3 +6,4 @@ requests
 nfl_data_py
 lxml
 html5lib
+pyarrow
