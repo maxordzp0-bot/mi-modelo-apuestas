@@ -61,7 +61,13 @@ def calcular_ev(prob_real, momio):
 
 @st.cache_data(ttl=86400)
 def calcular_epa_nfl():
-    pbp = nfl.import_pbp_data([2026]) # Usando temporada actual 2026
+    try:
+        # Intenta descargar la temporada actual
+        pbp = nfl.import_pbp_data([2026])
+    except Exception:
+        # Si el servidor de nfl_data_py falla o no encuentra 2026, usa 2025
+        pbp = nfl.import_pbp_data([2025])
+        
     pbp = pbp[(pbp['pass'] == 1) | (pbp['rush'] == 1)].dropna(subset=['epa', 'posteam', 'defteam'])
     epa_off = pbp.groupby('posteam')['epa'].mean().reset_index().rename(columns={'posteam': 'Equipo', 'epa': 'EPA_Off'})
     epa_def = pbp.groupby('defteam')['epa'].mean().reset_index().rename(columns={'defteam': 'Equipo', 'epa': 'EPA_Def'})
