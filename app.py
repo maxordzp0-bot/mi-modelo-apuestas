@@ -5,14 +5,14 @@ import requests
 from scipy.stats import norm, poisson
 import nfl_data_py as nfl
 import unicodedata
-import random # Usado para la simulación de Monte Carlo
+import random 
 
 st.set_page_config(page_title="QuantBet Pro V2", layout="wide", initial_sidebar_state="collapsed")
 
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'home'
 if 'daily_picks' not in st.session_state:
-    st.session_state.daily_picks = [] # Para almacenar picks globales y armar el parlay
+    st.session_state.daily_picks = [] 
 
 def navigate(page):
     st.session_state.current_page = page
@@ -29,7 +29,7 @@ st.markdown(
     ".hero-title { font-size: 3.5rem; font-weight: 800; text-align: center; color: #fff !important; margin-top: 1rem; }"
     ".hero-title span { color: #00E676 !important; }"
     ".hero-subtitle { text-align: center; color: #aaa !important; font-size: 1.1rem; margin-bottom: 2rem; }"
-    ".league-card { background: #1E2127 !important; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #333; text-align: center; cursor: pointer; transition: 0.2s; }"
+    ".league-card { background: #1E2127 !important; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #333; text-align: center; transition: 0.2s; }"
     ".league-card h2 { color: #fff !important; margin-bottom: 5px; }"
     ".league-card p { color: #888 !important; }"
     ".league-card:hover { transform: translateY(-5px); border-color: #00E676 !important; }"
@@ -57,38 +57,29 @@ def calcular_ev_y_kelly(prob_real, momio, bankroll):
     prob_imp = abs(momio) / (abs(momio) + 100) if momio < 0 else 100 / (momio + 100)
     dec = 1 + (100 / abs(momio)) if momio < 0 else 1 + (momio / 100)
     ev = ((prob_real * (dec - 1)) - (1 - prob_real)) * 100
-    kelly = max(0, (((dec - 1) * prob_real - (1 - prob_real)) / (dec - 1)) * 0.15) # Kelly fraccional conservador
+    kelly = max(0, (((dec - 1) * prob_real - (1 - prob_real)) / (dec - 1)) * 0.15) 
     return round(prob_imp * 100, 1), round(ev, 2), round(bankroll * kelly, 0)
 
 def simulacion_monte_carlo_ajustada(prob_base, variables_contexto):
-    """
-    Motor Cuantitativo/Cualitativo: Ajusta las probabilidades base integrando variables.
-    En producción, 'variables_contexto' debe alimentarse de APIs de clima, lesiones y stats avanzadas.
-    """
     modificador = 1.0
     
-    # 1. Lesiones (Impacto negativo en el equipo afectado)
     if variables_contexto.get('lesiones_clave', False):
         modificador -= 0.08
         
-    # 2. Clima (Afecta totales y beneficia a defensivas)
     clima = variables_contexto.get('clima', 'normal')
     if clima in ['lluvia_fuerte', 'nieve', 'viento_extremo']:
         if variables_contexto.get('mercado') == 'over': modificador -= 0.15
         if variables_contexto.get('mercado') == 'under': modificador += 0.15
         
-    # 3. Localía y Descanso (Fatiga)
     if variables_contexto.get('descanso_dias', 7) < 4:
         modificador -= 0.05
     if variables_contexto.get('es_local', False):
         modificador += 0.03
         
-    # 4. Eficiencia Defensiva vs Estilo Ofensivo (Matchup)
     modificador += variables_contexto.get('ventaja_matchup_tactico', 0.0)
 
     prob_ajustada = min(0.99, max(0.01, prob_base * modificador))
     
-    # Simulación de 10,000 iteraciones al límite
     simulaciones = np.random.binomial(1, prob_ajustada, 10000)
     prob_final = simulaciones.mean()
     
@@ -114,22 +105,25 @@ if st.session_state.current_page == 'home':
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown('<div class="league-card"><h2>⚽ Futbol</h2><p>xG + Poisson</p></div>', unsafe_allow_html=True)
+        if st.button("Entrar a Fútbol", use_container_width=True, key="btn_fut"): navigate('futbol')
     with c2:
         st.markdown('<div class="league-card"><h2>🏈 NFL</h2><p>EPA + Props</p></div>', unsafe_allow_html=True)
+        if st.button("Entrar a NFL", use_container_width=True, key="btn_nfl"): navigate('nfl')
     with c3:
         st.markdown('<div class="league-card"><h2>🏀 NBA</h2><p>Pace & Space</p></div>', unsafe_allow_html=True)
+        if st.button("Entrar a NBA", use_container_width=True, key="btn_nba"): navigate('nba')
     with c4:
         st.markdown('<div class="league-card"><h2>🏒 NHL</h2><p>xGoals</p></div>', unsafe_allow_html=True)
+        if st.button("Entrar a NHL", use_container_width=True, key="btn_nhl"): navigate('nhl')
 
 # ------------------------------------------
 # ⚽ FÚTBOL
 # ------------------------------------------
 elif st.session_state.current_page == 'futbol':
+    if st.button("Volver al Menú Principal"): navigate('home')
     st.markdown('<div class="hero-title" style="font-size:2.5rem;">Fútbol <span>Predictivo</span></div>', unsafe_allow_html=True)
     st.caption("Muestra los 3 mejores picks ajustados de la jornada.")
     
-    # Aquí iría el llamado a tu API de ESPN y simulación Poisson
-    # Simularemos la salida del modelo matemático para estructura:
     picks_futbol = [
         {"partido": "Arsenal vs Liverpool", "pick": "Empate", "prob": 0.42, "momio": 240, "ev": 8.5},
         {"partido": "Real Madrid vs Barcelona", "pick": "Over 2.5", "prob": 0.68, "momio": -150, "ev": 6.2},
@@ -150,6 +144,7 @@ elif st.session_state.current_page == 'futbol':
 # 🏈 NFL
 # ------------------------------------------
 elif st.session_state.current_page == 'nfl':
+    if st.button("Volver al Menú Principal"): navigate('home')
     st.markdown('<div class="hero-title" style="font-size:2.5rem;">NFL <span>Deep-Stats</span></div>', unsafe_allow_html=True)
     st.caption("Top 3 Picks (Spread/Total) + 1 Player Prop (Simulación de Matchup)")
     
@@ -173,7 +168,7 @@ elif st.session_state.current_page == 'nfl':
             f'</div></div>', unsafe_allow_html=True
         )
         
-    st.subheader("👤 Player Prop del Día (Simulación de Matchup)")
+    st.subheader("👤 Player Prop del Día")
     st.markdown(
         f'<div class="match-card" style="border-color:#FFC107;"><h3>{prop_nfl["jugador"]} ({prop_nfl["partido"]})</h3>'
         f'<div class="metric-box" style="border-color:#FFC107;">'
@@ -187,12 +182,11 @@ elif st.session_state.current_page == 'nfl':
 # 🏀 NBA / 🏒 NHL
 # ------------------------------------------
 elif st.session_state.current_page in ['nba', 'nhl']:
+    if st.button("Volver al Menú Principal"): navigate('home')
     sport = "NBA" if st.session_state.current_page == 'nba' else "NHL"
     st.markdown(f'<div class="hero-title" style="font-size:2.5rem;">{sport} <span>Projections</span></div>', unsafe_allow_html=True)
-    st.caption("Top 3 picks simulados considerando fatiga (Back-to-Back), lesiones y pace/xG.")
+    st.caption("Top 3 picks simulados considerando fatiga, lesiones y pace/xG.")
     
-    # Datos simulados del motor para estructurar el UI
-    picks_indoor = []
     if sport == "NBA":
         picks_indoor = [
             {"partido": "BOS Celtics vs NY Knicks", "pick": "Knicks +6.5", "prob": 0.57, "momio": -110, "ev": 3.2},
@@ -220,11 +214,10 @@ elif st.session_state.current_page in ['nba', 'nhl']:
 # 🔥 PARLAY DEL DÍA
 # ------------------------------------------
 elif st.session_state.current_page == 'parlay':
+    if st.button("Volver al Menú Principal"): navigate('home')
     st.markdown('<div class="hero-title" style="font-size:2.5rem;">🔥 Parlay <span>Algorítmico</span></div>', unsafe_allow_html=True)
-    st.caption("El modelo selecciona las 3 jugadas con mayor probabilidad y Expected Value (EV) combinadas en todas las ligas.")
+    st.caption("Las 3 jugadas con mayor probabilidad y Expected Value (EV) combinadas.")
     
-    # Filtrar los 3 mejores picks globales basados en EV (requiere haber visitado las páginas o cargarlos desde el backend)
-    # Aquí simulamos la recolección global para garantizar que funcione la vista
     pool_global = [
         {"deporte": "Fútbol", "partido": "Real Madrid vs Barcelona", "pick": "Over 2.5", "prob": 0.68, "momio": -150},
         {"deporte": "NFL", "partido": "SF 49ers vs PHI Eagles", "pick": "Under 47.5", "prob": 0.60, "momio": -110},
@@ -238,7 +231,6 @@ elif st.session_state.current_page == 'parlay':
         st.markdown(f"**{leg['deporte']}** | {leg['partido']} ➔ <span style='color:#00E676; font-size:1.1rem; font-weight:bold;'>{leg['pick']}</span>", unsafe_allow_html=True)
         st.divider()
         
-    # Calcular momio de parlay americano
     dec_parlay = 1.0
     for leg in pool_global:
         dec = 1 + (100 / abs(leg["momio"])) if leg["momio"] < 0 else 1 + (leg["momio"] / 100)
