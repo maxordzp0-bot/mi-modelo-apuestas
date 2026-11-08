@@ -1,9 +1,6 @@
 streamlit
 pandas
 numpy
-scipy
 requests
+scipy
 nfl_data_py
-lxml
-html5lib
-pyarrow
